@@ -172,6 +172,7 @@ impl Session {
                     auth,
                     &mut self.common.auth_user,
                     buf,
+                    self.common.is_cloud,
                 )
                 .await?;
                 handler = h;
@@ -253,7 +254,9 @@ impl Encrypted {
                 r.read_byte().map_err(crate::Error::from)?;
                 let password = r.read_string().map_err(crate::Error::from)?;
                 let password = std::str::from_utf8(password).map_err(crate::Error::from)?;
-                let (handler, auth) = handler.auth_password(user, password).await?;
+                // let (handler, auth) = handler.auth_password(user, password).await?;
+                let (handler, auth) = handler.auth_password(user, password, self.is_cloud).await?;
+
                 if let Auth::Accept = auth {
                     server_auth_request_success(&mut self.write);
                     self.state = EncryptedState::InitCompression;
@@ -274,7 +277,7 @@ impl Encrypted {
                 } else {
                     unreachable!()
                 };
-                let (handler, auth) = handler.auth_none(user).await?;
+                let (handler, auth) = handler.auth_none(user, self.is_cloud).await?;
                 if let Auth::Accept = auth {
                     server_auth_request_success(&mut self.write);
                     self.state = EncryptedState::InitCompression;
@@ -302,7 +305,8 @@ impl Encrypted {
                     submethods: submethods.to_string(),
                 });
                 let (h, auth) = handler
-                    .auth_keyboard_interactive(user, submethods, None)
+                    // .auth_keyboard_interactive(user, submethods, None)
+                    .auth_keyboard_interactive(user, submethods, None, self.is_cloud)
                     .await?;
                 handler = h;
                 if reply_userauth_info_response(until, auth_request, &mut self.write, auth).await? {
@@ -379,7 +383,9 @@ impl Encrypted {
                     } else if auth_user.is_empty() {
                         auth_user.clear();
                         auth_user.push_str(user);
-                        let (h, auth) = handler.auth_publickey(user, &pubkey).await?;
+                        // let (h, auth) = handler.auth_publickey(user, &pubkey).await?;
+                        let (h, auth) =
+                            handler.auth_publickey(user, &pubkey, self.is_cloud).await?;
                         handler = h;
                         auth == Auth::Accept
                     } else {
@@ -410,7 +416,8 @@ impl Encrypted {
                 } else {
                     auth_user.clear();
                     auth_user.push_str(user);
-                    let (h, auth) = handler.auth_publickey(user, &pubkey).await?;
+                    // let (h, auth) = handler.auth_publickey(user, &pubkey).await?;
+                    let (h, auth) = handler.auth_publickey(user, &pubkey, self.is_cloud).await?;
                     handler = h;
                     match auth {
                         Auth::Accept => {
@@ -489,13 +496,15 @@ async fn read_userauth_info_response<H: Handler>(
     auth_request: &mut AuthRequest,
     user: &mut str,
     b: &[u8],
+    is_cloud: bool,
 ) -> Result<(H, bool), H::Error> {
     if let Some(CurrentRequest::KeyboardInteractive { ref submethods }) = auth_request.current {
         let mut r = b.reader(1);
         let n = r.read_u32().map_err(crate::Error::from)?;
         let response = Response { pos: r, n };
         let (h, auth) = handler
-            .auth_keyboard_interactive(user, submethods, Some(response))
+            // .auth_keyboard_interactive(user, submethods, Some(response))
+            .auth_keyboard_interactive(user, submethods, Some(response), is_cloud)
             .await?;
         handler = h;
         let resp = reply_userauth_info_response(until, auth_request, write, auth)

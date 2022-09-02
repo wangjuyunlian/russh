@@ -48,6 +48,7 @@ pub(crate) struct Encrypted {
     pub compress: crate::compression::Compress,
     pub decompress: crate::compression::Decompress,
     pub compress_buffer: CryptoVec,
+    pub is_cloud: bool,
 }
 
 pub(crate) struct CommonSession<Config> {
@@ -61,6 +62,7 @@ pub(crate) struct CommonSession<Config> {
     pub wants_reply: bool,
     pub disconnected: bool,
     pub buffer: CryptoVec,
+    pub is_cloud: bool,
 }
 
 impl<C> CommonSession<C> {
@@ -95,6 +97,7 @@ impl<C> CommonSession<C> {
             compress: crate::compression::Compress::None,
             compress_buffer: CryptoVec::new(),
             decompress: crate::compression::Decompress::None,
+            is_cloud: self.is_cloud,
         });
         self.cipher = newkeys.cipher;
     }

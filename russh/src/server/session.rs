@@ -889,4 +889,8 @@ impl Session {
             });
         }
     }
+
+    pub fn is_cloud(&self) -> bool {
+        self.common.is_cloud
+    }
 }

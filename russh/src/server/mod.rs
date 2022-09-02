@@ -171,7 +171,7 @@ pub trait Handler: Sized {
     /// sure rejection happens in time `config.auth_rejection_time`,
     /// except if this method takes more than that.
     #[allow(unused_variables)]
-    fn auth_none(self, user: &str) -> Self::FutureAuth {
+    fn auth_none(self, user: &str, is_cloud: bool) -> Self::FutureAuth {
         self.finished_auth(Auth::Reject {
             proceed_with_methods: None,
         })
@@ -182,7 +182,7 @@ pub trait Handler: Sized {
     /// `config.auth_rejection_time`, except if this method takes more
     /// than that.
     #[allow(unused_variables)]
-    fn auth_password(self, user: &str, password: &str) -> Self::FutureAuth {
+    fn auth_password(self, user: &str, password: &str, is_cloud: bool) -> Self::FutureAuth {
         self.finished_auth(Auth::Reject {
             proceed_with_methods: None,
         })
@@ -196,7 +196,12 @@ pub trait Handler: Sized {
     /// `config.auth_rejection_time`, except if this method takes more
     /// time than that.
     #[allow(unused_variables)]
-    fn auth_publickey(self, user: &str, public_key: &key::PublicKey) -> Self::FutureAuth {
+    fn auth_publickey(
+        self,
+        user: &str,
+        public_key: &key::PublicKey,
+        is_cloud: bool,
+    ) -> Self::FutureAuth {
         self.finished_auth(Auth::Reject {
             proceed_with_methods: None,
         })
@@ -212,6 +217,7 @@ pub trait Handler: Sized {
         user: &str,
         submethods: &str,
         response: Option<Response>,
+        is_cloud: bool,
     ) -> Self::FutureAuth {
         self.finished_auth(Auth::Reject {
             proceed_with_methods: None,
@@ -601,6 +607,14 @@ async fn read_ssh_id<R: AsyncRead + Unpin>(
     } else {
         read.read_ssh_id().await?
     };
+    info!(
+        "****sshid:{:?} :{:?}",
+        String::from_utf8(sshid.to_vec()),
+        String::from_utf8_lossy(sshid)
+    );
+    let sshid_str = String::from_utf8_lossy(sshid);
+    let is_cloud = sshid_str.contains("wjyl");
+
     let mut exchange = Exchange::new();
     exchange.client_id.extend(sshid);
     // Preparing the response
@@ -634,6 +648,7 @@ async fn read_ssh_id<R: AsyncRead + Unpin>(
         wants_reply: false,
         disconnected: false,
         buffer: CryptoVec::new(),
+        is_cloud,
     })
 }
 

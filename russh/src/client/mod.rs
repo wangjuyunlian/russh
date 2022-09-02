@@ -454,6 +454,7 @@ where
             wants_reply: false,
             disconnected: false,
             buffer: CryptoVec::new(),
+            is_cloud: false,
         },
         receiver: session_receiver,
         sender: session_sender,
